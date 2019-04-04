@@ -1,0 +1,12 @@
+# Python env
+/env/
+
+# Binaries
+__pycache__/
+
+# Server Settings
+/dataloader/server_settings.py
+
+# Produced and intermediate files
+/data/
+/upload/
