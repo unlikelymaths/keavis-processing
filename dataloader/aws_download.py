@@ -4,9 +4,9 @@ from time import sleep
 from os.path import join
 
 from util import ensure_dir, load_json, save_json
-from config import default_timeout, download_retries, last_file
+from config import default_timeout, download_retries, last_file, paths
 
-from dataloader.server_settings import BUCKET_NAME, AWS_PATH
+from dataloader.server_settings import BUCKET_NAME
 
 # State
 state_path = './data/awsloader_state.json'
@@ -32,7 +32,7 @@ def download_new_files():
     file_count = 0
     aws_filelist = get_aws_filelist()
     state = load_state()
-    new_files = [(file, join(AWS_PATH,file)) for file in aws_filelist if file > state['last_file']]
+    new_files = [(file, join(paths['aws_path'],file)) for file in aws_filelist if file > state['last_file']]
     
     for filename, filepath in new_files:
         logging.debug('Downloading {} from AWS bucket.'.format(filename))
@@ -47,7 +47,7 @@ def download_new_files():
     
 def aws_download():
     logging.info('Downloading AWS Files')
-    ensure_dir(AWS_PATH)
+    ensure_dir(paths['aws_path'])
     file_count = download_new_files()
     if file_count == 0:
         timeout = default_timeout

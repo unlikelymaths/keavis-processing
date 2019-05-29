@@ -1,4 +1,5 @@
 import json
+import pickle
 import logging
 from os import path, makedirs
 from datetime import datetime
@@ -27,7 +28,17 @@ def ensure_dir(path_name):
     dirname = path.dirname(path_name)
     if not path.exists(dirname):
         makedirs(dirname)
-        
+
+def load_pickle(filename, default = {}):
+    ensure_dir(filename)
+    if path.isfile(filename):
+        return pickle.load(open(filename, 'rb'))
+    return default
+
+def save_pickle(filename, data):
+    ensure_dir(filename)
+    pickle.dump(data,open(filename,'wb'))
+
 def load_json(filename, default = {}):
     ensure_dir(filename)
     if path.isfile(filename):
@@ -38,7 +49,10 @@ def load_json(filename, default = {}):
 def save_json(filename, data, indent=2):
     ensure_dir(filename)
     with open(filename, "w", encoding="utf-8") as file:
-        json.dump(data, file, indent=indent, ensure_ascii=False)
+        if indent == 0:
+            json.dump(data, file, separators=(',', ':'), ensure_ascii=False)
+        else:
+            json.dump(data, file, indent=indent, ensure_ascii=False)
         
 class JsonArrayWriter():
     def __init__(self,filename):

@@ -44,7 +44,7 @@ class Vocab(object):
         data, i, j = [], [], []
         for bin in bins:
             for tweet in bin:
-                token_count = collections.Counter(tweet['tokens']).most_common()
+                token_count = collections.Counter(tweet.tokens).most_common()
                 count_sum = 0
                 for token, count in token_count:
                     count_sum += count
@@ -72,7 +72,7 @@ class Vocab(object):
     def _count_tokens(self, bin):
         counter = collections.Counter()
         for tweet in bin:
-            counter.update(collections.Counter(tweet['tokens']))
+            counter.update(collections.Counter(tweet.tokens))
         return counter.most_common()
     
     def _increase_count(self, add_bin):
