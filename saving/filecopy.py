@@ -50,7 +50,7 @@ class FileCopySaver():
         data['topicId'] = topic_frame.topic_id
         data['frameId'] = topic_frame.frame_id
         data['tokenList'] = topic_frame.token_list
-        data['tokenWeights'] = topic_frame.token_weights
+        data['tokenWeights'] = self.get_token_weights(frame, topic_frame)
         data['heatmapWeights'] = self.get_topicframe_heatmap_weights(frame,
             topic_frame)
         data['counts'] = topic_frame.counts
@@ -70,6 +70,15 @@ class FileCopySaver():
                 weights.append([weight,[]])
         for bin_id in frame.bin_ids:
             bin_weights = topic_frame.bin_heatmap(bin_id).weights
+            for i in range(len(bin_weights)):
+                if weights[i] != 0:
+                    weights[i][1].append(bin_weights[i])
+        return weights
+
+    def get_token_weights(self, frame, topic_frame):
+        weights = [[weight,[]] for weight in topic_frame.token_weights]
+        for bin_id in frame.bin_ids:
+            bin_weights = topic_frame.bin_token_weights(bin_id)
             for i in range(len(bin_weights)):
                 if weights[i] != 0:
                     weights[i][1].append(bin_weights[i])

@@ -83,6 +83,16 @@ class TopicFrame():
         token_weights = [w / num_bins for w in token_weights]
         return token_weights
 
+    def bin_token_weights(self, bin_id):
+        token_list = self.token_list
+        token_weights = [0,] * len(token_list)
+        if bin_id not in self.ids:
+            return token_weights
+        for topicword in self.topic_bins[self.ids[bin_id]].topicwords:
+            idx = token_list.index(topicword[0])
+            token_weights[idx] += topicword[1]
+        return token_weights
+
     @property
     def counts(self):
         counts = []
