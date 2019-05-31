@@ -66,6 +66,12 @@ class Frame():
             self._heatmap.reduce()
         return self._heatmap
 
+    def bin_heatmap(self, bin_id):
+        heatmap = Heatmap()
+        for topic_frame in self.topic_frames:
+            heatmap.add(topic_frame.bin_heatmap(bin_id))
+        return heatmap
+
 #    def save():
 #        topic_ids = [topicframe.data['topic_id'] for topicframe in topicframes]
 #

@@ -57,6 +57,12 @@ class TopicFrame():
                 self._heatmap.add(topic_bin.heatmap)
         return self._heatmap
 
+    def bin_heatmap(self, bin_id):
+        try:
+            return self.topic_bins[self.ids[bin_id]].heatmap
+        except KeyError:
+            return Heatmap()
+
     @property
     def token_list(self):
         tokens = set()
