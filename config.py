@@ -23,7 +23,7 @@ local_tz = timezone('America/Los_Angeles')
 
 # Bin settings
 binsize = timedelta(days = 0, hours = 1, minutes = 0, seconds = 0)
-first_bin = local_tz.localize(datetime(2019, 5, 25)).astimezone(utc)
+first_bin = local_tz.localize(datetime(2019, 7, 1)).astimezone(utc)
 def bin_name(utc_time):
     local_time = utc_time.astimezone(local_tz) 
     return '{}:00'.format(local_time.hour)
@@ -31,14 +31,15 @@ def bin_name_from_id(bin_id):
     return bin_name(first_bin + bin_id*binsize)
 
 # Frame settings
-framesize = timedelta(days = 0, hours = 6, minutes = 0, seconds = 0)
+framesize = timedelta(days = 1, hours = 0, minutes = 0, seconds = 0)
 def frame_id(utc_time):
     local_time = utc_time.astimezone(local_tz) 
-    #return local_time.day + local_time.month*100 + local_time.year*10000
-    return local_time.day*10 + local_time.month*1000 + local_time.year*100000 + local_time.hour//6
+    return local_time.day + local_time.month*100 + local_time.year*10000
+    #return local_time.day*10 + local_time.month*1000 + local_time.year*100000 + local_time.hour//6
 def frame_name(utc_time):
     local_time = utc_time.astimezone(local_tz) 
-    return '{},{}'.format(str(local_time.date()), local_time.hour//6)
+    #return '{},{}'.format(str(local_time.date()), local_time.hour//6)
+    return '{}'.format(str(local_time.date()))
 
 # check sizes
 if framesize%binsize != timedelta(0):

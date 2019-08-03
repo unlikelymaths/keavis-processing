@@ -9,7 +9,7 @@ from util import load_pickle, save_pickle
 from base.tweet import Tweet
 from base.bin import Bin, BinFilled
 
-state_path = './data/binning_state.pickle'
+state_path = './data/state/binning.pickle'
 last_bin = None
 
 def load_state():
