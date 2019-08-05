@@ -1,66 +1,19 @@
+import logging
+from os.path import isfile
 import warnings
 warnings.filterwarnings(action='ignore', category=UserWarning, module='gensim')
 from gensim.models import KeyedVectors
-import json
-from operator import itemgetter
-from difflib import get_close_matches
-from os.path import isfile
 
-exists_token = "###WORD_EXISTS###"
+from tools.s3 import intermediate_bucket
 
-def _load_json(filename):
-    with open(filename, "r", encoding="utf-8") as file:
-        return json.load(file)
-        
-def _save_json(data,filename):
-    with open(filename, "w", encoding="utf-8") as file:
-        json.dump(data, file, indent=2, ensure_ascii=False)
+class Word2VecFilter():
+    exists_token = "###WORD_EXISTS###"
 
-class Word2vecModel():
-    def __init__(self):
-        self.vocab_loaded = False
-        self.filter_loaded = False
-        self.model_data = None
-        self.embedding_filename = './data/embedding/word2vec.bin'
-        self.vocab_filename = './data/embedding/word2vec.vocab.txt'
-       
-    def load_model(self):
-        if self.model_data is None:
-            print('Loading Model')
-            self.model_data = KeyedVectors.load_word2vec_format(
-                self.embedding_filename, binary=True)
-            
-    def vocab(self):
-        if not self.vocab_loaded:
-            if isfile(self.vocab_filename):
-                self._vocab = _load_json(self.vocab_filename)
-            else:
-                self.load_model()
-                self._vocab = [str(token) for token in self.model_data.vocab]
-                _save_json(self._vocab, self.vocab_filename)
-            self.vocab_loaded = True
-        return self._vocab
-    
-    def vector_size(self):
-        self.load_model()
-        return self.model_data.wv.vector_size
-        
-    def get_embeddings(self):
-        self.load_model()
-        return self.model_data.wv
-        
-    def load_filter(self):
-        if self.filter_loaded:
-            return
-        print('Creating Filter')
-        self.filter_loaded = True
+    def __init__(self, vocab):
         self.lookup = {}
-        vocab = self.vocab()
         for token in vocab:
-            if '__' in token or token.startswith('_') or token.endswith('_'):
-                continue
-            words = token.replace("_"," ").split()
-            if len(words) == 0:
+            words = token.split('_')
+            if '' in words or len(words) == 0:
                 continue
             current_lookup = self.lookup
             for word in words:
@@ -68,56 +21,88 @@ class Word2vecModel():
                 if not lower_word in current_lookup:
                     current_lookup[lower_word] = {}
                 current_lookup = current_lookup[lower_word]
-            if exists_token in current_lookup:
-                #current_lookup[exists_token].append(token)
-                pass
-            else:
-                current_lookup[exists_token] = [token,]
-                
+            if Word2VecFilter.exists_token not in current_lookup:
+                current_lookup[Word2VecFilter.exists_token] = token
+
     def filter(self, all_tokens):
-        self.load_filter()
         idx = 0
         tokens = []
         while idx < len(all_tokens):
-            phrase = []
-            valid = 0
+            phrase = None
             currentidx = idx
+            valid = 0
             current_lookup = self.lookup
-            phrase_list = None
             while currentidx < len(all_tokens) and all_tokens[currentidx].lower() in current_lookup:
-                phrase.append(all_tokens[currentidx])
                 current_lookup = current_lookup[all_tokens[currentidx].lower()]
-                if exists_token in current_lookup:
-                    valid = len(phrase)
-                    phrase_list = current_lookup[exists_token]
+                if Word2VecFilter.exists_token in current_lookup:
+                    phrase = current_lookup[Word2VecFilter.exists_token]
+                    valid = valid + 1
                 currentidx = currentidx + 1
-            
-            if valid > 0:
-                phrase = "_".join(phrase[:valid])
-                if phrase in phrase_list:
-                    tokens.append(phrase)
-                else:
-                    match = get_close_matches(phrase, phrase_list, n=1, cutoff=0)[0]
-                    if match:
-                        tokens.append(match)
-                    else:
-                        print("WARNING: No match found in phrase_list. This should never happen...")
-            else:
-                #short_word = all_tokens[idx].lower().split("'")[0]
-                #if short_word in current_lookup:
-                #    tokens.append(short_word)
-                #else:
-                try:
-                    self.excluded[all_tokens[idx]] += 1
-                except:
-                    self.excluded[all_tokens[idx]] = 1
-
+            if phrase is not None:
+                tokens.append(phrase)
             idx += max(valid,1)
-        
         return tokens
-        
-        
-    
-        
-        
-        
+
+class Word2vecModel():
+    def __init__(self):
+        self._logger = logging.getLogger(__name__)
+        self._model = None
+        self._vector_size = None
+        self._embedding_function = None
+        self._vocab = None
+        self._filter = None
+
+        self.embedding_filename = '/data/embedding/word2vec.bin'
+        self.embedding_key = 'embedding/word2vec.bin'
+
+    @property
+    def model(self):
+        if self._model is None:
+            self._model = self._load_model()
+        return self._model
+
+    @property
+    def vector_size(self):
+        if self._vector_size is None:
+            self._vector_size = self.model.wv.vector_size
+        return self._vector_size
+
+    @property
+    def embedding_function(self):
+        if self._embedding_function is None:
+            self._embedding_function = self._load_embedding_function()
+        return self._embedding_function
+
+    @property
+    def vocab(self):
+        if self._vocab is None:
+            self._vocab = [str(token) for token in self.model.vocab]
+        return self._vocab
+
+    @property
+    def filter(self):
+        if self._filter is None:
+            self.vocab
+            self._logger.debug('Creating embedding filter')
+            self._filter = Word2VecFilter(self.vocab)
+        return self._filter
+
+    def _load_model(self):
+        if not isfile(self.embedding_filename):
+            self._logger.debug('Downloading embedding data ({})'
+                         .format(self.embedding_filename))
+            intermediate_bucket.download_file(self.embedding_key, 
+                                              self.embedding_filename)
+        self._logger.debug('Loading embedding data ({})'
+                     .format(self.embedding_filename))
+        return KeyedVectors.load_word2vec_format(
+            self.embedding_filename, binary=True)
+
+    def _load_embedding_function(self):
+        wv = self.model.wv
+        def embedding_function(token):
+            try:
+                return wv[token]
+            except:
+                raise OOVException('Word2vecModel',token)
+        return embedding_function
