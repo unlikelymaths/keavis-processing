@@ -1,6 +1,11 @@
 from datetime import tzinfo, datetime,timedelta
 from pytz import timezone, utc
 
+# Server
+raw_bucket_name = 'twitter.la.raw'
+intermediate_bucket_name = 'twitter.la.intermediate'
+result_bucket_name = 'twitter.la.web'
+
 # Download Settings
 last_file = '20190524.zip'
 default_timeout  = 60
